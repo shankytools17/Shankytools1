@@ -275,9 +275,53 @@
     .admin-form .row2{ grid-template-columns: 1fr; }
   }
   @media (prefers-reduced-motion: reduce){ * { animation: none !important; transition: none !important; } }
+
+  /* ===== BREACH INTRO OVERLAY ===== */
+  #breach-overlay{
+    position: fixed; inset:0; z-index: 99999;
+    background:#000; color: var(--blood);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family: var(--mono); gap:10px;
+    animation: breachFadeOut 0.5s ease-out 2.6s forwards;
+  }
+  @keyframes breachFadeOut{ to{ opacity:0; visibility:hidden; } }
+  #breach-overlay .flash{
+    position:absolute; inset:0; background: var(--blood);
+    animation: flashHit 2.6s ease-out forwards;
+    opacity:0;
+  }
+  @keyframes flashHit{
+    0%{ opacity:0; } 4%{ opacity:0.9; } 7%{ opacity:0; }
+    9%{ opacity:0.5; } 11%{ opacity:0; } 100%{ opacity:0; }
+  }
+  #breach-overlay .line{
+    font-size: 0.9rem; letter-spacing:2px; opacity:0;
+    animation: lineIn 0.4s forwards;
+    position:relative; z-index:2;
+  }
+  @keyframes lineIn{ to{ opacity:1; } }
+  #breach-overlay .big{
+    font-size: clamp(1.8rem, 8vw, 3.5rem); color:#fff; margin-top:14px;
+    text-shadow: 0 0 20px var(--blood), 0 0 40px var(--blood);
+    opacity:0; animation: lineIn 0.4s 1.4s forwards, shake 0.3s 1.4s;
+    position:relative; z-index:2;
+  }
+  @keyframes shake{
+    0%,100%{ transform: translate(0,0); } 25%{ transform: translate(-4px,2px); }
+    50%{ transform: translate(4px,-2px); } 75%{ transform: translate(-2px,-2px); }
+  }
+  @media (prefers-reduced-motion: reduce){ #breach-overlay{ display:none; } }
 </style>
 </head>
 <body>
+
+<div id="breach-overlay">
+  <div class="flash"></div>
+  <div class="line" style="animation-delay:0.1s;">&gt; unauthorized signal detected...</div>
+  <div class="line" style="animation-delay:0.5s;">&gt; bypassing firewall...</div>
+  <div class="line" style="animation-delay:0.9s;">&gt; access granted</div>
+  <div class="big">SHANKYTOOLS</div>
+</div>
 
 <div class="hazard-bar"></div>
 <nav>
@@ -383,6 +427,12 @@
       <a class="official-link" id="d-official" href="#" target="_blank" rel="noopener">official source &amp; documentation ↗</a>
     </div>
     <div class="detail-section"><h4>other tools</h4><div class="related-row" id="d-related"></div></div>
+
+    <div class="detail-section">
+      <h4>comments</h4>
+      <div id="comment-form-area"></div>
+      <div id="comments-list" style="margin-top:20px;"></div>
+    </div>
   </div>
 </div>
 
@@ -471,8 +521,20 @@
       <h2>admin panel</h2>
       <div class="admin-actions">
         <button class="btn" onclick="openForm()">+ add tool</button>
+        <button class="btn ghost" onclick="openBulkForm()">⚡ bulk import</button>
         <button class="btn ghost" onclick="doLogout()">log out</button>
       </div>
+    </div>
+
+    <div class="admin-form" id="bulk-form">
+      <h3>bulk import tools</h3>
+      <p style="color:var(--text-dim); font-size:0.82rem; margin-bottom:14px;">Paste the tool data JSON below, then hit import. This adds every tool in the list to the database in one go.</p>
+      <div class="field"><textarea id="f-bulk-json" style="min-height:220px;" placeholder="[ { &quot;name&quot;: ... }, ... ]"></textarea></div>
+      <div class="admin-form-actions">
+        <button class="btn" onclick="runBulkImport()">⚡ import all</button>
+        <button class="btn ghost" onclick="closeBulkForm()">cancel</button>
+      </div>
+      <div class="login-error" id="bulk-status"></div>
     </div>
 
     <div class="admin-form" id="admin-form">
@@ -539,6 +601,9 @@
   window.doLogout = doLogout;
   window.openForm = openForm;
   window.closeForm = closeForm;
+  window.openBulkForm = () => document.getElementById('bulk-form').classList.add('open');
+  window.closeBulkForm = () => document.getElementById('bulk-form').classList.remove('open');
+  window.runBulkImport = runBulkImport;
   window.saveTool = saveTool;
   window.editCurrentTool = editCurrentTool;
   window.deleteCurrentTool = deleteCurrentTool;
@@ -867,6 +932,38 @@
       alert('Save failed — check Firestore rules and that you are logged in as admin.');
       console.error(e);
     }
+  }
+
+  async function runBulkImport(){
+    const statusEl = document.getElementById('bulk-status');
+    statusEl.style.color = 'var(--acid)';
+    statusEl.textContent = '';
+    let data;
+    try{
+      data = JSON.parse(document.getElementById('f-bulk-json').value);
+      if(!Array.isArray(data)) throw new Error('not an array');
+    } catch(e){
+      statusEl.style.color = 'var(--blood)';
+      statusEl.textContent = 'Invalid JSON — paste the exact list provided.';
+      return;
+    }
+    statusEl.textContent = `Importing 0 / ${data.length}...`;
+    let done = 0;
+    for(const t of data){
+      try{
+        await addDoc(collection(db, 'tools'), {
+          name: t.name || '', tag: t.tag || '', icon: t.icon || '◆',
+          official: t.official || '', desc: t.desc || '',
+          install: t.install || '', use: t.use || '', output: t.output || '',
+          flags: t.flags || []
+        });
+      } catch(e){ console.error('failed on', t.name, e); }
+      done++;
+      statusEl.textContent = `Importing ${done} / ${data.length}...`;
+    }
+    statusEl.style.color = 'var(--acid)';
+    statusEl.textContent = `Done — ${done} tools imported.`;
+    loadTools();
   }
 
   function escapeHtml(str){
