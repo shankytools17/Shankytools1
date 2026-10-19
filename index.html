@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ShankyTools — Break Things On Purpose</title>
 <meta name="description" content="ShankyTools: real penetration-testing tools explained properly — install guides, flags, usage and legal context for Termux and Linux.">
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
   :root{
     --bg: #070505;
@@ -14,6 +15,9 @@
     --blood-dim: #6b1019;
     --blood-glow: rgba(255,43,61,0.35);
     --acid: #c9ff3d;
+    --gold: #ffbf00;
+    --gold-dim: #8a6a1a;
+    --gold-glow: rgba(255,191,0,0.35);
     --text: #e8d9d9;
     --text-dim: #8a7070;
     --mono: 'IBM Plex Mono', 'Courier New', monospace;
@@ -105,6 +109,55 @@
   }
   .cat-pill:hover{ border-color: var(--blood-dim); color: var(--text); }
   .cat-pill.active{ border-color: var(--blood); color: var(--blood); box-shadow: 0 0 12px var(--blood-glow) inset; }
+  .cat-pill.premium-pill{ border-color: var(--gold-dim); color: var(--gold); }
+  .cat-pill.premium-pill.active{ border-color: var(--gold); color: var(--gold); box-shadow: 0 0 12px var(--gold-glow) inset; }
+
+  /* ===== PREMIUM THEME ===== */
+  .tool-card.is-premium{
+    background: linear-gradient(145deg, var(--bg) 60%, rgba(255,191,0,0.04));
+    border-left: 2px solid var(--gold-dim);
+  }
+  .tool-card.is-premium:hover{ background: linear-gradient(145deg, var(--bg-panel) 60%, rgba(255,191,0,0.08)); }
+  .tool-card.is-premium::before{ background: var(--gold); }
+  .tool-card.is-premium .tool-icon{ border-color: var(--gold-dim); color: var(--gold); }
+  .tool-card.is-premium:hover .tool-icon{ box-shadow: 0 0 18px var(--gold-glow); border-color: var(--gold); }
+  .price-badge{
+    position:absolute; top:18px; right:18px;
+    font-family: var(--mono); font-size: 0.78rem; font-weight:bold;
+    color: #1a1200; background: linear-gradient(135deg, var(--gold), #ffdd66);
+    padding: 5px 12px; box-shadow: 0 0 16px var(--gold-glow);
+    animation: goldPulse 2s infinite;
+  }
+  @keyframes goldPulse{ 0%,100%{ box-shadow: 0 0 10px var(--gold-glow);} 50%{ box-shadow: 0 0 22px var(--gold-glow);} }
+  .premium-tag-inline{
+    font-family: var(--mono); font-size: 0.7rem; color: var(--gold);
+    border: 1px solid var(--gold-dim); padding: 3px 10px; display:inline-block; margin-bottom:10px;
+  }
+
+  .lock-screen{
+    border: 1px solid var(--gold-dim); background: linear-gradient(160deg, var(--bg-panel), rgba(255,191,0,0.03));
+    padding: 40px 30px; text-align:center; position: relative; overflow:hidden;
+  }
+  .lock-screen::before{
+    content:""; position:absolute; inset:0;
+    background: repeating-linear-gradient(45deg, rgba(255,191,0,0.03) 0 10px, transparent 10px 20px);
+    animation: hazardMove 8s linear infinite;
+  }
+  .lock-icon{ font-size: 2.4rem; margin-bottom: 16px; position:relative; z-index:2; filter: drop-shadow(0 0 14px var(--gold-glow)); }
+  .lock-screen h4{ font-family:var(--mono); color:#fff; font-size:1.2rem; margin-bottom:10px; position:relative; z-index:2; }
+  .lock-screen p{ color: var(--text-dim); font-size:0.88rem; max-width:50ch; margin:0 auto 24px; position:relative; z-index:2; }
+  .unlock-price{
+    font-family:var(--mono); font-size: 2.2rem; color: var(--gold); margin-bottom:20px; position:relative; z-index:2;
+    text-shadow: 0 0 20px var(--gold-glow);
+  }
+  .unlock-btn{
+    font-family: var(--mono); font-size: 0.95rem; padding: 15px 34px;
+    background: linear-gradient(135deg, var(--gold), #ffdd66); color:#1a1200; border:none;
+    cursor:pointer; position:relative; z-index:2; font-weight:bold;
+    box-shadow: 0 0 24px var(--gold-glow); transition: transform 0.2s;
+  }
+  .unlock-btn:hover{ transform: scale(1.04); }
+  .unlock-status{ font-family:var(--mono); font-size:0.78rem; color:var(--text-dim); margin-top:16px; position:relative; z-index:2; }
 
   .tools-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
   .tool-card{ background: var(--bg); padding: 28px 26px; position: relative; transition: background 0.25s, transform 0.2s; cursor: pointer; }
@@ -363,6 +416,7 @@
     </div>
     <div class="cat-row" id="cat-row">
       <div class="cat-pill active" data-cat="all">all</div>
+      <div class="cat-pill premium-pill" data-cat="premium">⚡ premium</div>
       <div class="cat-pill" data-cat="Network Scanning">scanning</div>
       <div class="cat-pill" data-cat="Password Auditing">password auditing</div>
       <div class="cat-pill" data-cat="Packet Analysis">network analysis</div>
@@ -522,8 +576,24 @@
       <div class="admin-actions">
         <button class="btn" onclick="openForm()">+ add tool</button>
         <button class="btn ghost" onclick="openBulkForm()">⚡ bulk import</button>
+        <button class="btn ghost" onclick="openGrantForm()" style="border-color:var(--gold-dim); color:var(--gold);">🔓 grant access</button>
         <button class="btn ghost" onclick="doLogout()">log out</button>
       </div>
+    </div>
+
+    <div class="admin-form" id="grant-form">
+      <h3 style="color:var(--gold);">grant premium access manually</h3>
+      <p style="color:var(--text-dim); font-size:0.82rem; margin-bottom:14px;">Use this after confirming a UPI payment screenshot on WhatsApp.</p>
+      <div class="field"><label>user's email (the one they logged in / signed up with)</label><input type="email" id="grant-email" placeholder="user@example.com"></div>
+      <div class="field">
+        <label>tool to unlock</label>
+        <select id="grant-tool-select" style="width:100%; background:#050202; border:1px solid var(--line); color:var(--text); padding:12px 14px; font-family:var(--mono); font-size:0.9rem;"></select>
+      </div>
+      <div class="admin-form-actions">
+        <button class="btn" onclick="runGrantAccess()" style="border-color:var(--gold); color:var(--gold);">🔓 grant access</button>
+        <button class="btn ghost" onclick="closeGrantForm()">cancel</button>
+      </div>
+      <div class="login-error" id="grant-status"></div>
     </div>
 
     <div class="admin-form" id="bulk-form">
@@ -553,6 +623,16 @@
       <div class="field"><label>usage command</label><textarea id="f-use" placeholder="nmap -sV target"></textarea></div>
       <div class="field"><label>sample output</label><textarea id="f-output" placeholder="PORT STATE..."></textarea></div>
       <div class="field"><label>flags (one per line, format: flag | description)</label><textarea id="f-flags" placeholder="-sV | Detect service versions"></textarea></div>
+      <div class="row2">
+        <div class="field">
+          <label>premium tool?</label>
+          <select id="f-is-premium" style="width:100%; background:#050202; border:1px solid var(--line); color:var(--text); padding:12px 14px; font-family:var(--mono); font-size:0.9rem;">
+            <option value="no">No — free</option>
+            <option value="yes">Yes — premium (locked)</option>
+          </select>
+        </div>
+        <div class="field"><label>price (USD, e.g. 3)</label><input type="number" id="f-price" placeholder="3"></div>
+      </div>
       <div class="admin-form-actions">
         <button class="btn" onclick="saveTool()">save</button>
         <button class="btn ghost" onclick="closeForm()">cancel</button>
@@ -588,6 +668,8 @@
   const db = getFirestore(app);
 
   const ADMIN_EMAIL = "bhaisunna0@gmail.com";
+  const UPI_ID = "9217042367@fam";
+  const CONTACT_NUMBER = "9217042367";
   let currentUser = null;
   let TOOLS = [];
   let currentDetailId = null;
@@ -731,7 +813,7 @@
     }
   }
 
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     loggedInUser = user || null;
     if(user && user.email === ADMIN_EMAIL){
       currentUser = user;
@@ -740,6 +822,7 @@
     }
     if(user){
       document.getElementById('account-email').textContent = user.email;
+      await loadUserPurchases();
     }
     renderNav();
     renderGrid('all');
@@ -794,23 +877,37 @@
     document.getElementById('tool-count').textContent = TOOLS.length;
     renderGrid('all');
     renderAdminTable();
+    populateGrantDropdown();
+  }
+
+  function populateGrantDropdown(){
+    const sel = document.getElementById('grant-tool-select');
+    if(!sel) return;
+    const premiumTools = TOOLS.filter(t => t.isPremium);
+    sel.innerHTML = premiumTools.length
+      ? premiumTools.map(t => `<option value="${t.docId}">${escapeHtml(t.name)} ($${t.price||0})</option>`).join('')
+      : '<option value="">no premium tools yet</option>';
   }
 
   function renderGrid(filter){
     const grid = document.getElementById('tools-grid');
-    const list = filter === 'all' ? TOOLS : TOOLS.filter(t => t.tag === filter);
+    let list;
+    if(filter === 'all') list = TOOLS;
+    else if(filter === 'premium') list = TOOLS.filter(t => t.isPremium);
+    else list = TOOLS.filter(t => t.tag === filter);
     if(list.length === 0){
       grid.innerHTML = `<div class="empty-state">no tools yet${currentUser ? ' — add one from the admin panel' : ''}.</div>`;
       return;
     }
     grid.innerHTML = list.map(t => `
-      <div class="tool-card" data-id="${t.docId}">
+      <div class="tool-card ${t.isPremium ? 'is-premium' : ''}" data-id="${t.docId}">
+        ${t.isPremium ? `<div class="price-badge">$${t.price || 0}</div>` : ''}
         <div class="tool-id">TOOL</div>
         <div class="tool-icon">${t.icon || '◆'}</div>
         <h3>${escapeHtml(t.name||'')}</h3>
         <span class="tool-tag">${escapeHtml(t.tag||'')}</span>
         <p>${escapeHtml(t.desc||'')}</p>
-        <span class="tool-link">open full page →</span>
+        <span class="tool-link">${t.isPremium ? '🔒 unlock full guide →' : 'open full page →'}</span>
       </div>`).join('');
     grid.querySelectorAll('.tool-card').forEach(card => {
       card.addEventListener('click', () => openTool(card.dataset.id));
@@ -825,24 +922,109 @@
     renderGrid(pill.dataset.cat);
   });
 
-  function openTool(docId){
+  let userPurchases = new Set();
+
+  async function loadUserPurchases(){
+    userPurchases = new Set();
+    if(!loggedInUser) return;
+    try{
+      const q = query(collection(db, 'purchases'));
+      const snap = await getDocs(q);
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if(data.uid === loggedInUser.uid || (data.email && data.email === loggedInUser.email)) userPurchases.add(data.toolId);
+      });
+    } catch(e){ console.error('purchase load failed', e); }
+  }
+
+  async function openTool(docId){
     const t = TOOLS.find(x => x.docId === docId);
     if(!t) return;
     currentDetailId = docId;
     document.getElementById('d-icon').textContent = t.icon || '◆';
     document.getElementById('d-name').textContent = t.name || '';
-    document.getElementById('d-tag').textContent = t.tag || '';
+    document.getElementById('d-tag').textContent = (t.isPremium ? '⚡ PREMIUM — ' : '') + (t.tag || '');
     document.getElementById('d-desc').textContent = t.desc || '';
-    document.getElementById('d-install').innerHTML = `<button class="copy-btn" onclick="copyText(this)">copy</button><span class="prompt">$ </span>${escapeHtml(t.install||'')}`;
-    document.getElementById('d-use').innerHTML = `<button class="copy-btn" onclick="copyText(this)">copy</button><span class="prompt">$ </span>${escapeHtml(t.use||'')}`;
-    document.getElementById('d-output').textContent = t.output || '';
-    const flags = (t.flags || []);
-    document.getElementById('d-flags').innerHTML = flags.map(f => `<li><span class="flag">${escapeHtml(f.flag||'')}</span><span>${escapeHtml(f.desc||'')}</span></li>`).join('') || '<li>none listed</li>';
-    document.getElementById('d-official').href = t.official || '#';
-    document.getElementById('d-related').innerHTML = TOOLS.filter(x => x.docId !== docId).slice(0,5).map(x =>
-      `<span class="related-pill" onclick="openTool('${x.docId}')">${escapeHtml(x.name)}</span>`).join('');
     document.getElementById('d-admin-actions').style.display = currentUser ? 'flex' : 'none';
+
+    const hasAccess = currentUser || !t.isPremium || userPurchases.has(docId);
+    const body = document.querySelector('.detail-body');
+
+    if(!hasAccess){
+      const priceINR = Math.round((t.price || 0) * 83);
+      body.innerHTML = `
+        <div class="detail-section"><h4>what it does</h4><p>${escapeHtml(t.desc||'')}</p></div>
+        <div class="detail-section">
+          <div class="lock-screen">
+            <div class="lock-icon">🔒</div>
+            <h4>This is a premium guide</h4>
+            <p>Full install steps, usage commands, sample output and flag reference are locked. Unlock this tool's complete guide with a one-time UPI payment.</p>
+            <div class="unlock-price">$${t.price || 0} <span style="font-size:1rem; color:var(--text-dim);">(≈ ₹${priceINR})</span></div>
+            <div style="background:#050202; border:1px solid var(--gold-dim); padding:18px; margin:0 auto 20px; max-width:380px; font-family:var(--mono); font-size:0.85rem; text-align:left;">
+              <div style="color:var(--gold); margin-bottom:10px;">// how to unlock</div>
+              <div style="color:var(--text-dim); line-height:1.8;">
+                1. Pay ₹${priceINR} to UPI ID:<br>
+                <span style="color:#fff; user-select:all;">${UPI_ID}</span><br><br>
+                2. Screenshot the payment<br>
+                3. Send it on WhatsApp to <span style="color:#fff;">${CONTACT_NUMBER}</span> with your login email and tool name (<b>${escapeHtml(t.name||'')}</b>)<br>
+                4. Access gets unlocked on your account within a few hours
+              </div>
+            </div>
+            <a class="unlock-btn" style="display:inline-block; text-decoration:none;" href="https://wa.me/91${CONTACT_NUMBER}?text=${encodeURIComponent('Payment done for: ' + (t.name||'') + ' | My login email: ' + (loggedInUser ? loggedInUser.email : '[your email]'))}" target="_blank" rel="noopener">💬 message on whatsapp</a>
+            <div class="unlock-status">${loggedInUser ? 'logged in as ' + loggedInUser.email : '⚠ log in first so we know which account to unlock'}</div>
+          </div>
+        </div>
+        <div class="detail-section"><h4>comments</h4><div id="comment-form-area"></div><div id="comments-list" style="margin-top:20px;"></div></div>
+      `;
+    } else {
+      body.innerHTML = `
+        <div class="detail-section"><h4>what it does</h4><p>${escapeHtml(t.desc||'')}</p></div>
+        <div class="detail-section"><h4>install — termux / linux</h4><div class="code-block" id="d-install"><button class="copy-btn" onclick="copyText(this)">copy</button></div></div>
+        <div class="detail-section"><h4>basic usage</h4><div class="code-block" id="d-use"><button class="copy-btn" onclick="copyText(this)">copy</button></div></div>
+        <div class="detail-section"><h4>sample output</h4><div class="output-block" id="d-output"></div></div>
+        <div class="detail-section"><h4>key flags &amp; options</h4><ul class="flag-list" id="d-flags"></ul></div>
+        <div class="detail-section">
+          <div class="legal-box"><span>⚠</span><span>Run this only against systems you own or have written permission to test. Unauthorized use is illegal under laws like India's IT Act, 2000.</span></div>
+          <a class="official-link" id="d-official" href="${t.official||'#'}" target="_blank" rel="noopener">official source &amp; documentation ↗</a>
+        </div>
+        <div class="detail-section"><h4>other tools</h4><div class="related-row" id="d-related"></div></div>
+        <div class="detail-section"><h4>comments</h4><div id="comment-form-area"></div><div id="comments-list" style="margin-top:20px;"></div></div>
+      `;
+      document.getElementById('d-install').innerHTML = `<button class="copy-btn" onclick="copyText(this)">copy</button><span class="prompt">$ </span>${escapeHtml(t.install||'')}`;
+      document.getElementById('d-use').innerHTML = `<button class="copy-btn" onclick="copyText(this)">copy</button><span class="prompt">$ </span>${escapeHtml(t.use||'')}`;
+      document.getElementById('d-output').textContent = t.output || '';
+      const flags = (t.flags || []);
+      document.getElementById('d-flags').innerHTML = flags.map(f => `<li><span class="flag">${escapeHtml(f.flag||'')}</span><span>${escapeHtml(f.desc||'')}</span></li>`).join('') || '<li>none listed</li>';
+      document.getElementById('d-related').innerHTML = TOOLS.filter(x => x.docId !== docId).slice(0,5).map(x =>
+        `<span class="related-pill" onclick="openTool('${x.docId}')">${escapeHtml(x.name)}</span>`).join('');
+    }
     showView('detail');
+  }
+
+  // ===== Admin: manually grant a premium tool to a user by email =====
+  window.openGrantForm = () => document.getElementById('grant-form').classList.add('open');
+  window.closeGrantForm = () => document.getElementById('grant-form').classList.remove('open');
+  window.runGrantAccess = runGrantAccess;
+
+  async function runGrantAccess(){
+    const email = document.getElementById('grant-email').value.trim();
+    const toolId = document.getElementById('grant-tool-select').value;
+    const statusEl = document.getElementById('grant-status');
+    statusEl.style.color = 'var(--acid)';
+    if(!email || !toolId){ statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Enter an email and pick a tool.'; return; }
+    const tool = TOOLS.find(t => t.docId === toolId);
+    try{
+      await addDoc(collection(db, 'purchases'), {
+        email: email, toolId: toolId, toolName: tool ? tool.name : '',
+        grantedBy: 'admin', unlockedAt: new Date().toISOString()
+      });
+      statusEl.textContent = `Access granted to ${email} for ${tool ? tool.name : toolId}.`;
+      document.getElementById('grant-email').value = '';
+    } catch(e){
+      statusEl.style.color = 'var(--blood)';
+      statusEl.textContent = 'Failed to grant access — check Firestore rules.';
+      console.error(e);
+    }
   }
 
   function editCurrentTool(){ if(currentDetailId) editTool(currentDetailId); }
@@ -871,7 +1053,8 @@
 
   function openForm(){
     document.getElementById('form-title').textContent = 'add tool';
-    ['f-docid','f-name','f-tag','f-icon','f-official','f-desc','f-install','f-use','f-output','f-flags'].forEach(id => document.getElementById(id).value = '');
+    ['f-docid','f-name','f-tag','f-icon','f-official','f-desc','f-install','f-use','f-output','f-flags','f-price'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-is-premium').value = 'no';
     document.getElementById('admin-form').classList.add('open');
   }
   function closeForm(){ document.getElementById('admin-form').classList.remove('open'); }
@@ -890,6 +1073,8 @@
     document.getElementById('f-use').value = t.use || '';
     document.getElementById('f-output').value = t.output || '';
     document.getElementById('f-flags').value = (t.flags||[]).map(f => `${f.flag} | ${f.desc}`).join('\n');
+    document.getElementById('f-is-premium').value = t.isPremium ? 'yes' : 'no';
+    document.getElementById('f-price').value = t.price || '';
     showView('admin');
     document.getElementById('admin-form').classList.add('open');
   }
@@ -917,7 +1102,9 @@
       install: document.getElementById('f-install').value.trim(),
       use: document.getElementById('f-use').value.trim(),
       output: document.getElementById('f-output').value.trim(),
-      flags: flags
+      flags: flags,
+      isPremium: document.getElementById('f-is-premium').value === 'yes',
+      price: parseFloat(document.getElementById('f-price').value) || 0
     };
     if(!data.name){ alert('Name is required.'); return; }
     try{
@@ -940,11 +1127,18 @@
     statusEl.textContent = '';
     let data;
     try{
-      data = JSON.parse(document.getElementById('f-bulk-json').value);
+      let raw = document.getElementById('f-bulk-json').value;
+      // fix smart/curly quotes that mobile keyboards sometimes introduce on paste
+      raw = raw
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .trim();
+      data = JSON.parse(raw);
       if(!Array.isArray(data)) throw new Error('not an array');
     } catch(e){
       statusEl.style.color = 'var(--blood)';
-      statusEl.textContent = 'Invalid JSON — paste the exact list provided.';
+      statusEl.textContent = 'Invalid JSON: ' + e.message + ' — make sure you copied the whole file, starting with [ and ending with ].';
+      console.error(e);
       return;
     }
     statusEl.textContent = `Importing 0 / ${data.length}...`;
