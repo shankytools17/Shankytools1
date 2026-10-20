@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ShankyTools — Break Things On Purpose</title>
 <meta name="description" content="ShankyTools: real penetration-testing tools explained properly — install guides, flags, usage and legal context for Termux and Linux.">
+<meta property="og:title" content="ShankyTools — Break Things On Purpose">
+<meta property="og:description" content="A hands-on index of real open-source penetration-testing tools, explained properly for Termux and Linux.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23070505'/%3E%3Ctext x='50' y='68' font-size='60' text-anchor='middle' fill='%23ff2b3d'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
   :root{
@@ -25,7 +29,13 @@
   }
   *{ box-sizing: border-box; margin:0; padding:0; }
   html{ scroll-behavior: smooth; }
-  body{ background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; overflow-x: hidden; }
+  body{
+    background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; overflow-x: hidden;
+    background-image:
+      linear-gradient(rgba(255,43,61,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,43,61,0.025) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
   body::before{
     content:""; position: fixed; inset:0;
     background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
@@ -52,8 +62,13 @@
     padding: 18px 5%; background: rgba(7,5,5,0.92); backdrop-filter: blur(6px);
     border-bottom: 1px solid var(--line);
   }
-  .logo{ font-family: var(--mono); font-size: 1.15rem; color: var(--text); cursor: pointer; }
+  .logo{ font-family: var(--mono); font-size: 1.15rem; color: var(--text); cursor: pointer; display:flex; align-items:center; gap:10px; }
   .logo span{ color: var(--blood); text-shadow: 0 0 12px var(--blood-glow); }
+  .live-badge{
+    font-family: var(--mono); font-size: 0.6rem; color: var(--acid);
+    border: 1px solid rgba(201,255,61,0.3); padding: 2px 8px; display:flex; align-items:center; gap:5px;
+  }
+  .live-badge .pip{ width:5px; height:5px; border-radius:50%; background:var(--acid); box-shadow:0 0 6px var(--acid); animation: pulse 1.2s infinite; }
   .navlinks{ display:flex; gap: 22px; font-family: var(--mono); font-size: 0.85rem; align-items:center; }
   .navlinks a{ color: var(--text-dim); transition: color 0.2s; cursor:pointer; }
   .navlinks a:hover{ color: var(--blood); }
@@ -80,13 +95,236 @@
   @keyframes blink{ 50%{ opacity:0; } }
   .hero p{ margin-top: 28px; max-width: 58ch; color: var(--text-dim); font-size: 1.05rem; }
   .hero-actions{ margin-top: 36px; display:flex; gap:16px; flex-wrap:wrap; }
+  .hacker-figure{
+    position:absolute; right:2%; bottom:2%; z-index:1;
+    font-family: var(--mono); font-size: 0.5rem; line-height:1.15;
+    color: var(--blood); opacity:0.6;
+    text-shadow: 0 0 10px var(--blood-glow);
+    animation: figureFlicker 3.5s infinite, figureFloat 6s ease-in-out infinite;
+  }
+  @media (min-width: 720px){ .hacker-figure{ font-size: 0.72rem; right:4%; bottom:6%; } }
+  @keyframes figureFlicker{
+    0%, 92%, 100%{ opacity:0.5; filter:none; }
+    93%{ opacity:0.9; filter:brightness(1.8); transform: translateX(-2px); }
+    94%{ opacity:0.2; }
+    95%{ opacity:0.6; transform: translateX(2px); }
+  }
+  @keyframes figureFloat{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-10px); } }
   .btn{
     font-family: var(--mono); font-size: 0.9rem; padding: 14px 26px;
     border: 1px solid var(--blood-dim); color: var(--blood); background: transparent; cursor:pointer; transition: all 0.2s;
+    position: relative; overflow:hidden; isolation:isolate;
   }
+  .btn::before{
+    content:""; position:absolute; top:0; left:-100%; width:100%; height:100%;
+    background: linear-gradient(90deg, transparent, rgba(255,43,61,0.25), transparent);
+    transition: left 0.5s; z-index:-1;
+  }
+  .btn:hover::before{ left:100%; }
   .btn:hover{ background: var(--blood); color: #0a0303; box-shadow: 0 0 30px var(--blood-glow); }
   .btn.ghost{ border-color: var(--line); color: var(--text-dim); }
   .btn.ghost:hover{ border-color: var(--text-dim); background:transparent; color: var(--text); box-shadow:none; }
+
+  /* ===== HUD STATUS PANEL ===== */
+  .hud-panel{
+    display:flex; gap:1px; background:var(--line); border:1px solid var(--line);
+    padding:0; flex-wrap:wrap;
+  }
+  .hud-card{
+    flex:1; min-width:150px; background: var(--bg-panel);
+    padding: 24px 18px; display:flex; flex-direction:column; align-items:center; gap:14px;
+    position:relative; overflow:hidden;
+  }
+  .hud-card-wide{ flex:2; min-width:220px; }
+  .hud-label{
+    font-family: var(--mono); font-size:0.72rem; color:var(--text-dim); letter-spacing:1px; text-transform:uppercase;
+  }
+
+  .hud-ring-wrap{ position:relative; width:110px; height:110px; }
+  .hud-ring{ width:110px; height:110px; transform: rotate(-90deg); }
+  .hud-ring-bg{ fill:none; stroke: var(--line); stroke-width:6; }
+  .hud-ring-fg{
+    fill:none; stroke: var(--blood); stroke-width:6; stroke-linecap:round;
+    stroke-dasharray: 327; stroke-dashoffset: 327;
+    filter: drop-shadow(0 0 6px var(--blood-glow));
+    animation: ringFill 3s ease-out forwards infinite alternate;
+    transform-origin: center;
+    will-change: stroke-dashoffset;
+  }
+  @keyframes ringFill{ from{ stroke-dashoffset: 327; } to{ stroke-dashoffset: 40; } }
+  .hud-ring-center{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family: var(--mono); color:#fff; font-size:1.1rem;
+  }
+
+  .hud-lock-wrap{ position:relative; width:90px; height:90px; display:flex; align-items:center; justify-content:center; }
+  .hud-lock-icon{ font-size:2.2rem; filter: drop-shadow(0 0 10px var(--blood-glow)); z-index:2; animation: pulse 2s infinite; }
+  .hud-lock-ring{
+    position:absolute; border-radius:50%; border: 1px dashed var(--blood-dim);
+    will-change: transform;
+  }
+  .hud-lock-ring.r1{ width:90px; height:90px; animation: spin 8s linear infinite; }
+  .hud-lock-ring.r2{ width:68px; height:68px; border-color: var(--blood); opacity:0.5; animation: spin 6s linear infinite reverse; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  .hud-alert-badge{
+    font-family: var(--mono); font-size:0.75rem; color: var(--blood); font-weight:bold; letter-spacing:2px;
+    animation: alertBlink 1.1s steps(1) infinite;
+    will-change: opacity;
+  }
+  @keyframes alertBlink{ 0%,49%{ opacity:1; } 50%,100%{ opacity:0.15; } }
+
+  .hud-globe{
+    position:relative; width:160px; height:90px; border:1px solid var(--line);
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,43,61,0.06), transparent 70%);
+    overflow:hidden;
+  }
+  .hud-globe-grid{
+    position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,43,61,0.12) 0 1px, transparent 1px 14px),
+      repeating-linear-gradient(90deg, rgba(255,43,61,0.12) 0 1px, transparent 1px 14px);
+    animation: gridScroll 4s linear infinite;
+    will-change: background-position;
+  }
+  @keyframes gridScroll{ from{ background-position: 0 0, 0 0; } to{ background-position: 0 14px, 14px 0; } }
+  .ping{
+    position:absolute; width:6px; height:6px; border-radius:50%; background: var(--blood);
+    box-shadow: 0 0 8px var(--blood);
+    animation: pingPulse 2.4s ease-out infinite;
+    will-change: transform, opacity;
+  }
+  @keyframes pingPulse{
+    0%{ transform: scale(0.6); opacity:1; }
+    70%{ transform: scale(2.6); opacity:0; }
+    100%{ opacity:0; }
+  }
+  .ping.p1{ top:20%; left:25%; animation-delay:0s; }
+  .ping.p2{ top:55%; left:60%; animation-delay:0.6s; }
+  .ping.p3{ top:35%; left:80%; animation-delay:1.2s; }
+  .ping.p4{ top:70%; left:15%; animation-delay:1.8s; }
+
+  /* ---- radar sweep ---- */
+  .hud-radar-wrap{ position:relative; width:90px; height:90px; border-radius:50%; border:1px solid var(--line); overflow:hidden; background:#050202; }
+  .hud-radar-grid-circle{
+    position:absolute; inset:0; border-radius:50%;
+    background:
+      repeating-radial-gradient(circle at center, rgba(255,43,61,0.15) 0 1px, transparent 1px 16px),
+      linear-gradient(90deg, transparent 49%, rgba(255,43,61,0.15) 50%, transparent 51%),
+      linear-gradient(0deg, transparent 49%, rgba(255,43,61,0.15) 50%, transparent 51%);
+  }
+  .hud-radar-sweep{
+    position:absolute; inset:0; border-radius:50%;
+    background: conic-gradient(from 0deg, rgba(255,43,61,0.65), transparent 35%);
+    animation: spin 2.4s linear infinite; will-change: transform;
+  }
+  .radar-blip{
+    position:absolute; width:5px; height:5px; border-radius:50%; background:var(--acid);
+    box-shadow:0 0 6px var(--acid); animation: pulse 1.6s infinite; will-change: opacity;
+  }
+  .radar-blip.b1{ top:28%; left:60%; animation-delay:0.3s; }
+  .radar-blip.b2{ top:65%; left:35%; animation-delay:1s; }
+
+  /* ---- intrusion beacon ---- */
+  .hud-beacon{
+    width:70px; height:70px; border-radius:50%; position:relative;
+    background: radial-gradient(circle, var(--blood) 0%, transparent 70%);
+    animation: beaconSpin 1.6s linear infinite, pulse 1.6s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  .hud-beacon::before{
+    content:""; position:absolute; inset:0; border-radius:50%;
+    background: conic-gradient(from 0deg, transparent, rgba(255,43,61,0.8), transparent 40%);
+    animation: spin 1s linear infinite; will-change: transform;
+  }
+  @keyframes beaconSpin{ 0%,100%{ filter:brightness(1);} 50%{ filter:brightness(1.6);} }
+
+  /* ---- system load bars ---- */
+  .load-bars{ display:flex; flex-direction:column; gap:10px; width:100%; max-width:140px; }
+  .load-bar{ height:8px; background:#050202; border:1px solid var(--line); overflow:hidden; }
+  .load-bar span{
+    display:block; height:100%; background: linear-gradient(90deg, var(--blood-dim), var(--blood));
+    box-shadow: 0 0 8px var(--blood-glow);
+    animation: loadFill 2.6s ease-in-out infinite; will-change: width;
+  }
+  .load-bar:nth-child(1) span{ animation-duration: 2.1s; }
+  .load-bar:nth-child(2) span{ animation-duration: 3.4s; }
+  .load-bar:nth-child(3) span{ animation-duration: 2.8s; }
+  @keyframes loadFill{ 0%{ width:5%; } 50%{ width:95%; } 100%{ width:5%; } }
+
+  /* ---- live log feed ---- */
+  .log-feed-section{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding: 20px 5%; background: #040202; }
+  .log-feed-head{
+    font-family: var(--mono); font-size:0.78rem; color: var(--acid); margin-bottom:12px;
+    display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:1px;
+  }
+  .pip-sm{ width:6px; height:6px; border-radius:50%; background:var(--acid); box-shadow:0 0 6px var(--acid); animation: pulse 1.2s infinite; }
+  .log-feed{
+    font-family: var(--mono); font-size:0.78rem; color: var(--text-dim);
+    height: 130px; overflow:hidden; position:relative; display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  .log-line{ opacity:0; animation: logLineIn 0.4s forwards; padding:2px 0; }
+  .log-line .tag{ color: var(--blood); margin-right:8px; }
+  @keyframes logLineIn{ from{ opacity:0; transform: translateY(6px);} to{ opacity:1; transform: translateY(0);} }
+
+  /* ---- sonar rings behind hero heading ---- */
+  .sonar-rings{ position:absolute; left:-30px; top:50%; width:1px; height:1px; pointer-events:none; }
+  .sonar-ring{
+    position:absolute; left:0; top:0; width:20px; height:20px; margin:-10px;
+    border:1px solid var(--blood); border-radius:50%;
+    animation: sonarExpand 3s ease-out infinite; will-change: transform, opacity;
+  }
+  .sonar-ring:nth-child(2){ animation-delay:1s; }
+  .sonar-ring:nth-child(3){ animation-delay:2s; }
+  @keyframes sonarExpand{ 0%{ transform: scale(1); opacity:0.8; } 100%{ transform: scale(12); opacity:0; } }
+
+  /* ---- scroll-reveal glow for tool cards ---- */
+  .tool-card{ opacity:0; transform: translateY(16px); }
+  .tool-card.revealed{ animation: cardReveal 0.5s ease-out forwards; }
+  @keyframes cardReveal{
+    0%{ opacity:0; transform: translateY(16px); box-shadow: 0 0 0 rgba(255,43,61,0); }
+    60%{ box-shadow: 0 0 24px rgba(255,43,61,0.25); }
+    100%{ opacity:1; transform: translateY(0); box-shadow: 0 0 0 rgba(255,43,61,0); }
+  }
+
+  /* ---- card hover internal scanline sweep ---- */
+  .tool-card{ position:relative; }
+  .tool-card::after{
+    content:""; position:absolute; left:0; right:0; top:-100%; height:40%;
+    background: linear-gradient(180deg, transparent, rgba(255,43,61,0.12), transparent);
+    transition: top 0.6s; pointer-events:none;
+  }
+  .tool-card:hover::after{ top:120%; transition: top 0.8s ease-in; }
+
+  /* ---- view transition glitch tear ---- */
+  body.view-transitioning .view.active{ animation: viewTear 0.35s steps(3); }
+  @keyframes viewTear{
+    0%{ clip-path: inset(0 0 0 0); transform: translateX(0); filter:none; }
+    30%{ clip-path: inset(10% 0 60% 0); transform: translateX(-6px); filter: hue-rotate(20deg); }
+    60%{ clip-path: inset(55% 0 5% 0); transform: translateX(6px); filter: hue-rotate(-10deg); }
+    100%{ clip-path: inset(0 0 0 0); transform: translateX(0); filter:none; }
+  }
+
+  /* ---- occasional static noise flash ---- */
+  #noise-flash{ position:fixed; inset:0; z-index:9997; pointer-events:none; background:#fff; opacity:0; }
+  #noise-flash.hit{ animation: noiseFlash 0.15s steps(2); }
+  @keyframes noiseFlash{ 0%{ opacity:0; } 40%{ opacity:0.04; } 100%{ opacity:0; } }
+
+  /* ---- persistent corner terminal prompt ---- */
+  #corner-prompt{
+    position: fixed; bottom:10px; left:10px; z-index: 50;
+    font-family: var(--mono); font-size:0.65rem; color: var(--blood-dim);
+    opacity:0.6; pointer-events:none; user-select:none;
+  }
+  #corner-prompt .blink-cursor{ animation: blink 1s steps(1) infinite; }
+  @media (max-width:500px){ #corner-prompt{ display:none; } }
+
+  @media (prefers-reduced-motion: reduce){
+    .hud-ring-fg, .hud-lock-ring, .hud-alert-badge, .hud-globe-grid, .ping,
+    .hud-radar-sweep, .radar-blip, .hud-beacon, .hud-beacon::before, .load-bar span,
+    .sonar-ring, .tool-card::after, #noise-flash, body.view-transitioning .view.active{ animation: none !important; }
+    .tool-card{ opacity:1; transform:none; }
+  }
 
   .disclaimer{
     background: var(--bg-panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
@@ -98,19 +336,70 @@
 
   section{ padding: 90px 5%; }
   .section-head{ margin-bottom: 50px; max-width: 70ch; }
-  .section-head .kicker{ font-family: var(--mono); color: var(--blood-dim); font-size: 0.8rem; margin-bottom: 10px; }
-  .section-head h2{ font-family: var(--mono); font-size: clamp(1.6rem, 3.5vw, 2.3rem); color: #fff; }
+  .section-head .kicker{
+    font-family: var(--mono); color: var(--blood-dim); font-size: 0.8rem; margin-bottom: 10px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .section-head .kicker::after{ content:""; flex:1; height:1px; background: linear-gradient(90deg, var(--blood-dim), transparent); max-width:120px; }
+  .section-head h2{
+    font-family: var(--mono); font-size: clamp(1.6rem, 3.5vw, 2.3rem); color: #fff;
+    position:relative; display:inline-block; padding-bottom:12px;
+  }
+  .section-head h2::after{
+    content:""; position:absolute; left:0; bottom:0; width:60px; height:3px;
+    background: linear-gradient(90deg, var(--blood), transparent);
+    box-shadow: 0 0 10px var(--blood-glow);
+  }
   .section-head p{ color: var(--text-dim); margin-top: 14px; }
 
-  .cat-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 50px; }
-  .cat-pill{
-    font-family: var(--mono); font-size: 0.78rem; padding: 8px 16px; border: 1px solid var(--line);
-    color: var(--text-dim); cursor: pointer; transition: all 0.2s; background: transparent;
+  .cat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom: 50px; position:relative; padding-bottom:18px; }
+  .cat-row::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:1px;
+    background: linear-gradient(90deg, var(--blood), transparent 60%);
+    box-shadow: 0 0 8px var(--blood-glow);
   }
-  .cat-pill:hover{ border-color: var(--blood-dim); color: var(--text); }
-  .cat-pill.active{ border-color: var(--blood); color: var(--blood); box-shadow: 0 0 12px var(--blood-glow) inset; }
+  .cat-pill{
+    font-family: var(--mono); font-size: 0.76rem; padding: 10px 18px;
+    border: 1px solid var(--line); border-radius:2px;
+    color: var(--text-dim); cursor: pointer; background: #0a0606;
+    position:relative; overflow:hidden; letter-spacing:0.5px;
+    transition: color 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+  }
+  .cat-pill::before{
+    content:""; position:absolute; inset:0;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,43,61,0.18) 50%, transparent 70%);
+    transform: translateX(-120%); transition: transform 0.5s;
+  }
+  .cat-pill:hover{
+    border-color: var(--blood); color: #fff;
+    box-shadow: 0 0 14px var(--blood-glow), inset 0 0 8px rgba(255,43,61,0.1);
+    transform: translateY(-2px);
+  }
+  .cat-pill:hover::before{ transform: translateX(120%); }
+  .cat-pill.active{
+    border-color: var(--blood); color: #fff; background: rgba(255,43,61,0.08);
+    box-shadow: 0 0 10px var(--blood-glow), 0 0 22px var(--blood-glow), inset 0 0 10px rgba(255,43,61,0.15);
+    text-shadow: 0 0 8px var(--blood-glow);
+    animation: neonPulse 2s ease-in-out infinite;
+  }
+  @keyframes neonPulse{
+    0%,100%{ box-shadow: 0 0 10px var(--blood-glow), 0 0 22px var(--blood-glow), inset 0 0 10px rgba(255,43,61,0.15); }
+    50%{ box-shadow: 0 0 16px var(--blood-glow), 0 0 32px var(--blood-glow), inset 0 0 14px rgba(255,43,61,0.22); }
+  }
   .cat-pill.premium-pill{ border-color: var(--gold-dim); color: var(--gold); }
-  .cat-pill.premium-pill.active{ border-color: var(--gold); color: var(--gold); box-shadow: 0 0 12px var(--gold-glow) inset; }
+  .cat-pill.premium-pill::before{ background: linear-gradient(120deg, transparent 30%, rgba(255,191,0,0.22) 50%, transparent 70%); }
+  .cat-pill.premium-pill:hover{ border-color: var(--gold); color:#fff; box-shadow: 0 0 14px var(--gold-glow), inset 0 0 8px rgba(255,191,0,0.12); }
+  .cat-pill.premium-pill.active{
+    border-color: var(--gold); color:#fff; background: rgba(255,191,0,0.08);
+    box-shadow: 0 0 10px var(--gold-glow), 0 0 22px var(--gold-glow), inset 0 0 10px rgba(255,191,0,0.15);
+    text-shadow: 0 0 8px var(--gold-glow);
+    animation: neonPulseGold 2s ease-in-out infinite;
+  }
+  @keyframes neonPulseGold{
+    0%,100%{ box-shadow: 0 0 10px var(--gold-glow), 0 0 22px var(--gold-glow), inset 0 0 10px rgba(255,191,0,0.15); }
+    50%{ box-shadow: 0 0 16px var(--gold-glow), 0 0 32px var(--gold-glow), inset 0 0 14px rgba(255,191,0,0.22); }
+  }
+  @media (prefers-reduced-motion: reduce){ .cat-pill.active, .cat-pill.premium-pill.active{ animation:none; } }
 
   /* ===== PREMIUM THEME ===== */
   .tool-card.is-premium{
@@ -159,7 +448,11 @@
   .unlock-btn:hover{ transform: scale(1.04); }
   .unlock-status{ font-family:var(--mono); font-size:0.78rem; color:var(--text-dim); margin-top:16px; position:relative; z-index:2; }
 
-  .tools-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .tools-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1px;
+    background: var(--line); border: 1px solid var(--line);
+    box-shadow: 0 0 40px rgba(255,43,61,0.04);
+  }
   .tool-card{ background: var(--bg); padding: 28px 26px; position: relative; transition: background 0.25s, transform 0.2s; cursor: pointer; }
   .tool-card::before{ content:""; position:absolute; top:0; left:0; width:3px; height:0; background: var(--blood); transition: height 0.25s; }
   .tool-card:hover{ background: var(--bg-panel); transform: translateX(4px); }
@@ -170,7 +463,11 @@
     font-family: var(--mono); color: var(--blood); font-size:1.15rem; margin-bottom: 18px; transition: box-shadow 0.25s, border-color 0.25s;
   }
   .tool-card:hover .tool-icon{ box-shadow: 0 0 18px var(--blood-glow); border-color: var(--blood); }
-  .tool-card h3{ font-family: var(--mono); font-size: 1.15rem; color: #fff; margin-bottom: 6px; }
+  .tool-card h3{
+    font-family: var(--mono); font-size: 1.15rem; color: #fff; margin-bottom: 6px;
+    transition: text-shadow 0.25s;
+  }
+  .tool-card:hover h3{ text-shadow: 0 0 10px var(--blood-glow); }
   .tool-tag{ font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); margin-bottom: 14px; display:block;}
   .tool-card p{ color: var(--text-dim); font-size: 0.92rem; margin-bottom: 20px; }
   .tool-link{ font-family: var(--mono); font-size: 0.82rem; color: var(--blood); display:inline-flex; align-items:center; gap:8px; }
@@ -364,10 +661,43 @@
     50%{ transform: translate(4px,-2px); } 75%{ transform: translate(-2px,-2px); }
   }
   @media (prefers-reduced-motion: reduce){ #breach-overlay{ display:none; } }
+
+  /* ===== GLOBAL DARKWEB WORD LAYER ===== */
+  #darkweb-layer{
+    position: fixed; inset:0; z-index: -1;
+    pointer-events:none; overflow:hidden;
+  }
+  #global-matrix-canvas{ position:absolute; inset:0; width:100%; height:100%; opacity:0.07; }
+  .float-word{
+    position: absolute;
+    font-family: var(--mono);
+    font-weight: bold;
+    white-space: nowrap;
+    color: rgba(255,43,61,0.09);
+    text-shadow: 0 0 8px rgba(255,43,61,0.15);
+    animation: floatDrift linear forwards, wordGlitch 2.5s steps(2) infinite;
+    user-select:none;
+  }
+  @keyframes floatDrift{
+    0%{ transform: translateY(0) translateX(0); opacity:0; }
+    8%{ opacity:1; }
+    92%{ opacity:1; }
+    100%{ transform: translateY(-60px) translateX(20px); opacity:0; }
+  }
+  @keyframes wordGlitch{
+    0%, 85%{ transform: skewX(0deg); filter:none; }
+    86%{ transform: skewX(4deg); filter: brightness(2); }
+    87%{ transform: skewX(-3deg); filter: brightness(0.5); }
+    88%, 100%{ transform: skewX(0deg); filter:none; }
+  }
+  @media (prefers-reduced-motion: reduce){ #darkweb-layer{ display:none; } }
 </style>
 </head>
 <body>
 
+<div id="darkweb-layer"><canvas id="global-matrix-canvas"></canvas></div>
+<div id="noise-flash"></div>
+<div id="corner-prompt">root@shankytools:~$ <span class="blink-cursor">_</span></div>
 <div id="breach-overlay">
   <div class="flash"></div>
   <div class="line" style="animation-delay:0.1s;">&gt; unauthorized signal detected...</div>
@@ -378,11 +708,11 @@
 
 <div class="hazard-bar"></div>
 <nav>
-  <div class="logo" onclick="showView('home')">shanky<span>tools</span></div>
+  <div class="logo" onclick="showView('home')">shanky<span>tools</span><span class="live-badge"><span class="pip"></span>LIVE</span></div>
   <div class="navlinks">
     <a onclick="showView('home')">tools</a>
+    <a onclick="scrollToSection('about')">about</a>
     <a onclick="scrollToSection('disclaimer-full')">disclaimer</a>
-    <a onclick="scrollToSection('guides')">guides</a>
     <span id="nav-user-area"></span>
     <span id="nav-auth-area"></span>
   </div>
@@ -393,7 +723,9 @@
   <section class="hero">
     <canvas id="matrix-canvas"></canvas>
     <div class="hero-inner">
-      <div class="hero-eyebrow"><span class="dot"></span> <span id="tool-count">0</span> TOOLS INDEXED · LIVE</div>
+      <div class="hero-eyebrow"><span class="dot"></span> <span id="tool-count">0</span> TOOLS INDEXED · LIVE
+        <span class="sonar-rings"><span class="sonar-ring"></span><span class="sonar-ring"></span><span class="sonar-ring"></span></span>
+      </div>
       <h1 id="typed-heading">break it before<br>someone else does<span class="cursor">&nbsp;</span></h1>
       <p>ShankyTools is a hands-on index of the open-source tools real penetration testers use — scanning, password auditing, network analysis, recon. Installed on Termux or Linux, explained properly, used legally.</p>
       <div class="hero-actions">
@@ -401,6 +733,81 @@
         <button class="btn ghost" onclick="document.getElementById('disclaimer-full').scrollIntoView()">read the rules</button>
       </div>
     </div>
+    <pre class="hacker-figure" aria-hidden="true">
+         .-""""""-.
+       /  ########  \
+      |  ##########  |
+      |  ## O  O ##  |
+       \   ######   /
+        '.________.'
+        /|   ##   |\
+       / |   ##   | \
+      /  |________|  \
+         |   ||   |
+         |   ||   |
+        _|   ||   |_
+    </pre>
+  </section>
+
+  <!-- ===== HUD STATUS PANEL ===== -->
+  <section class="hud-panel">
+    <div class="hud-card">
+      <div class="hud-ring-wrap">
+        <svg class="hud-ring" viewBox="0 0 120 120">
+          <circle class="hud-ring-bg" cx="60" cy="60" r="52"></circle>
+          <circle class="hud-ring-fg" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="hud-ring-center"><span id="hud-percent">0</span>%</div>
+      </div>
+      <div class="hud-label">threat scan</div>
+    </div>
+
+    <div class="hud-card">
+      <div class="hud-lock-wrap">
+        <div class="hud-lock-ring r1"></div>
+        <div class="hud-lock-ring r2"></div>
+        <div class="hud-lock-icon">🔒</div>
+      </div>
+      <div class="hud-alert-badge">⚠ ALERT</div>
+      <div class="hud-label">node secured</div>
+    </div>
+
+    <div class="hud-card hud-card-wide">
+      <div class="hud-globe">
+        <div class="hud-globe-grid"></div>
+        <span class="ping p1"></span><span class="ping p2"></span><span class="ping p3"></span><span class="ping p4"></span>
+      </div>
+      <div class="hud-label" id="hud-scan-label">scanning global nodes...</div>
+    </div>
+
+    <div class="hud-card">
+      <div class="hud-radar-wrap">
+        <div class="hud-radar-grid-circle"></div>
+        <div class="hud-radar-sweep"></div>
+        <span class="radar-blip b1"></span><span class="radar-blip b2"></span>
+      </div>
+      <div class="hud-label">radar sweep</div>
+    </div>
+
+    <div class="hud-card">
+      <div class="hud-beacon"></div>
+      <div class="hud-label">intrusion beacon</div>
+    </div>
+
+    <div class="hud-card">
+      <div class="load-bars">
+        <div class="load-bar"><span></span></div>
+        <div class="load-bar"><span></span></div>
+        <div class="load-bar"><span></span></div>
+      </div>
+      <div class="hud-label">system load</div>
+    </div>
+  </section>
+
+  <!-- ===== LIVE SYSTEM LOG FEED ===== -->
+  <section class="log-feed-section">
+    <div class="log-feed-head"><span class="pip-sm"></span> live system log</div>
+    <div class="log-feed" id="log-feed"></div>
   </section>
 
   <div class="disclaimer">
@@ -415,14 +822,14 @@
       <p>Click any card to open its full page: install steps, flags, example commands and sample output.</p>
     </div>
     <div class="cat-row" id="cat-row">
-      <div class="cat-pill active" data-cat="all">all</div>
+      <div class="cat-pill active" data-cat="all">◆ all</div>
       <div class="cat-pill premium-pill" data-cat="premium">⚡ premium</div>
-      <div class="cat-pill" data-cat="Network Scanning">scanning</div>
-      <div class="cat-pill" data-cat="Password Auditing">password auditing</div>
-      <div class="cat-pill" data-cat="Packet Analysis">network analysis</div>
-      <div class="cat-pill" data-cat="OSINT">osint</div>
-      <div class="cat-pill" data-cat="Wireless Security">wireless</div>
-      <div class="cat-pill" data-cat="Web App Testing">web app</div>
+      <div class="cat-pill" data-cat="Network Scanning">⌁ scanning</div>
+      <div class="cat-pill" data-cat="Password Auditing">⚿ password auditing</div>
+      <div class="cat-pill" data-cat="Packet Analysis">◈ network analysis</div>
+      <div class="cat-pill" data-cat="OSINT">◉ osint</div>
+      <div class="cat-pill" data-cat="Wireless Security">📶 wireless</div>
+      <div class="cat-pill" data-cat="Web App Testing">⚙ web app</div>
     </div>
     <div class="tools-grid" id="tools-grid"><div class="empty-state">loading tools…</div></div>
   </section>
@@ -446,9 +853,37 @@
     </div>
   </section>
 
+  <section id="about">
+    <div class="section-head">
+      <div class="kicker">004 / WHO'S BEHIND THIS</div>
+      <h2>About ShankyTools</h2>
+      <p style="max-width:65ch;">
+        ShankyTools is run by Shankar — a self-taught cybersecurity learner who built this site as a clean, no-fluff reference for the open-source tools used in ethical hacking and penetration testing. Everything here is tested, documented honestly, and linked back to its real source. No cracked software, no fake "hack anyone" promises — just properly explained tools and a legal way to practice using them.
+      </p>
+      <p style="max-width:65ch; margin-top:14px; color:var(--text-dim); font-size:0.85rem;">
+        Questions, feedback, or payment issues? Message on WhatsApp: <a href="https://wa.me/919217042367" target="_blank" rel="noopener">9217042367</a>
+      </p>
+    </div>
+  </section>
+
+  <section id="terms">
+    <div class="section-head">
+      <div class="kicker">005 / TERMS &amp; REFUNDS</div>
+      <h2>Terms of use</h2>
+      <p style="max-width:65ch;">
+        By using ShankyTools you agree to use every tool and guide listed here only on systems you own or are explicitly authorized to test. We are not responsible for any misuse. Premium guides are sold as educational content; once access is granted, the sale is final. If you paid and access wasn't granted within 24 hours of sending your payment proof on WhatsApp, message us and we'll either unlock it or refund you in full.
+      </p>
+    </div>
+  </section>
+
   <footer>
-    <div>© shankytools — built for learning, not for harm.</div>
-    <div>contact: hello@shankytools.example</div>
+    <div>
+      © shankytools — built for learning, not for harm.<br>
+      <a href="#about" onclick="document.getElementById('about').scrollIntoView()">about</a> ·
+      <a href="#terms" onclick="document.getElementById('terms').scrollIntoView()">terms &amp; refunds</a> ·
+      <a href="#disclaimer-full" onclick="document.getElementById('disclaimer-full').scrollIntoView()">disclaimer</a>
+    </div>
+    <div>contact: <a href="https://wa.me/919217042367" target="_blank" rel="noopener">WhatsApp 9217042367</a></div>
   </footer>
 </div>
 
@@ -693,10 +1128,12 @@
   window.deleteTool = deleteTool;
 
   function showView(name){
+    document.body.classList.add('view-transitioning');
     ['home','detail','login','admin','user-auth','account'].forEach(v => {
       document.getElementById('view-'+v).classList.toggle('active', v === name);
     });
     window.scrollTo(0,0);
+    setTimeout(() => document.body.classList.remove('view-transitioning'), 400);
   }
   window.switchAuthTab = switchAuthTab;
   window.doUserLogin = doUserLogin;
@@ -912,6 +1349,24 @@
     grid.querySelectorAll('.tool-card').forEach(card => {
       card.addEventListener('click', () => openTool(card.dataset.id));
     });
+    revealCardsOnScroll();
+  }
+
+  function revealCardsOnScroll(){
+    const cards = document.querySelectorAll('.tool-card:not(.revealed)');
+    if(!('IntersectionObserver' in window)){
+      cards.forEach(c => c.classList.add('revealed'));
+      return;
+    }
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          entry.target.classList.add('revealed');
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    cards.forEach(c => obs.observe(c));
   }
 
   document.getElementById('cat-row').addEventListener('click', (e) => {
@@ -1225,6 +1680,118 @@
   }
   startMatrixRain('matrix-canvas', '.hero');
   startMatrixRain('auth-matrix-canvas', '.auth-terminal-wrap');
+
+  // ===== live system log feed =====
+  if(!prefersReduced){
+    const LOG_LINES = [
+      "connection established from 10.0.0.{n}",
+      "handshake verified — session #{n}",
+      "scanning port range {n}-{n2}...",
+      "firewall rule updated: ACCEPT tcp/{n}",
+      "new node discovered: node-{n}.shankynet",
+      "integrity check passed — hash OK",
+      "decrypting payload chunk {n}/48",
+      "auth token refreshed for session #{n}",
+      "ids: no anomalies detected",
+      "syncing threat database... {n}%",
+      "closing idle connection #{n}",
+      "ping sweep complete — {n} hosts up"
+    ];
+    const feed = document.getElementById('log-feed');
+    function addLogLine(){
+      if(!feed) return;
+      const tpl = LOG_LINES[Math.floor(Math.random()*LOG_LINES.length)];
+      const n = Math.floor(Math.random()*255);
+      const n2 = n + Math.floor(Math.random()*500)+100;
+      const text = tpl.replace('{n2}', n2).replace(/\{n\}/g, n);
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="tag">[sys]</span>${text}`;
+      feed.appendChild(line);
+      while(feed.children.length > 6) feed.removeChild(feed.firstChild);
+    }
+    for(let i=0;i<5;i++) setTimeout(addLogLine, i*200);
+    setInterval(addLogLine, 1400);
+  }
+
+  // ===== occasional static noise flash =====
+  if(!prefersReduced){
+    const noiseEl = document.getElementById('noise-flash');
+    setInterval(() => {
+      if(!noiseEl) return;
+      noiseEl.classList.add('hit');
+      setTimeout(() => noiseEl.classList.remove('hit'), 200);
+    }, 5000 + Math.random()*4000);
+  }
+
+  // ===== HUD percent counter (synced loosely with ring animation) =====
+  if(!prefersReduced){
+    const hudPercentEl = document.getElementById('hud-percent');
+    if(hudPercentEl){
+      let goingUp = true, val = 0;
+      setInterval(() => {
+        val += goingUp ? 2 : -2;
+        if(val >= 100){ val = 100; goingUp = false; }
+        if(val <= 0){ val = 0; goingUp = true; }
+        hudPercentEl.textContent = val;
+      }, 55);
+    }
+  }
+
+  // ===== global faint matrix rain across whole site =====
+  if(!prefersReduced){
+    const gCanvas = document.getElementById('global-matrix-canvas');
+    const gCtx = gCanvas.getContext('2d');
+    function gResize(){ gCanvas.width = window.innerWidth; gCanvas.height = window.innerHeight; }
+    gResize();
+    window.addEventListener('resize', gResize);
+    const gChars = "01アイウエオカキクケコサシスセソ$#&%*!X";
+    const gFontSize = 16;
+    let gColumns = Math.floor(gCanvas.width / gFontSize);
+    let gDrops = new Array(gColumns).fill(1);
+    function gDraw(){
+      gCtx.fillStyle = "rgba(7,5,5,0.08)";
+      gCtx.fillRect(0,0,gCanvas.width,gCanvas.height);
+      gCtx.font = gFontSize + "px monospace";
+      for(let i=0;i<gDrops.length;i++){
+        gCtx.fillStyle = "#ff2b3d";
+        const text = gChars[Math.floor(Math.random()*gChars.length)];
+        gCtx.fillText(text, i*gFontSize, gDrops[i]*gFontSize);
+        if(gDrops[i]*gFontSize > gCanvas.height && Math.random() > 0.975) gDrops[i] = 0;
+        gDrops[i]++;
+      }
+    }
+    setInterval(gDraw, 60);
+  }
+
+  // ===== global darkweb floating words =====
+  if(!prefersReduced){
+    const DARK_WORDS = [
+      "ACCESS DENIED", "BREACH DETECTED", "ROOT COMPROMISED", "INTRUSION DETECTED",
+      "FIREWALL BYPASSED", "TRACE BLOCKED", "SYSTEM VULNERABLE", "KERNEL PANIC",
+      "0xDEADBEEF", "ENCRYPTED", "PAYLOAD DELIVERED", "SHELL OBTAINED",
+      "PORT OPEN", "CONNECTION HIJACKED", "DATA EXFILTRATED", "exploit.run()",
+      "sudo rm -rf /", "unauthorized_access()", "CVE-2024-XXXX", "backdoor.sh",
+      "PERMISSION ESCALATED", "SESSION HIJACKED", "NULL POINTER", "SEGFAULT",
+      "root@target:~#", "...decrypting...", "handshake captured", "injecting payload"
+    ];
+    const layer = document.getElementById('darkweb-layer');
+    function spawnWord(){
+      const el = document.createElement('div');
+      el.className = 'float-word';
+      el.textContent = DARK_WORDS[Math.floor(Math.random() * DARK_WORDS.length)];
+      const size = 0.8 + Math.random() * 2.2;
+      el.style.fontSize = size + 'rem';
+      el.style.left = Math.random() * 90 + '%';
+      el.style.top = Math.random() * 100 + '%';
+      const duration = 8 + Math.random() * 10;
+      el.style.animationDuration = duration + 's, 2.5s';
+      layer.appendChild(el);
+      setTimeout(() => el.remove(), duration * 1000 + 200);
+    }
+    setInterval(spawnWord, 900);
+    for(let i=0;i<6;i++) setTimeout(spawnWord, i * 300);
+  }
 </script>
 
 </body>
