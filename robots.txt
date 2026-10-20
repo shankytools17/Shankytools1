@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://shankytools17.github.io/Shankytools1/sitemap.xml
