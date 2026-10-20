@@ -848,7 +848,8 @@
       <h2>Written guides &amp; practice labs</h2>
       <p>Free articles cover the fundamentals. Paid guides go deeper — step-by-step walkthroughs, lab setups, and cheat sheets built from our own notes.</p>
     </div>
-    <p style="color:var(--text-dim); font-family:var(--mono); font-size:0.85rem;">
+    <div class="tools-grid" id="articles-grid"></div>
+    <p style="color:var(--text-dim); font-family:var(--mono); font-size:0.85rem; margin-top:30px;">
       → Practice legally on <a href="https://tryhackme.com" target="_blank" rel="noopener">TryHackMe</a> and <a href="https://hackthebox.com" target="_blank" rel="noopener">Hack The Box</a> before touching anything outside a lab.
     </p>
   </section>
@@ -931,6 +932,22 @@
       <div id="comments-list" style="margin-top:20px;"></div>
     </div>
   </div>
+</div>
+
+<!-- ===================== ARTICLE VIEW ===================== -->
+<div class="view" id="view-article">
+  <div class="detail-hero">
+    <button class="back-link" onclick="showView('home')">← back to guides</button>
+    <div class="detail-top">
+      <div class="detail-top-left">
+        <div>
+          <h1 id="a-title"></h1>
+          <span class="detail-tag" id="a-meta"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="detail-body" id="a-body"></div>
 </div>
 
 <!-- ===================== ADMIN LOGIN VIEW ===================== -->
@@ -1137,11 +1154,15 @@
 
   function showView(name){
     document.body.classList.add('view-transitioning');
-    ['home','detail','login','admin','user-auth','account'].forEach(v => {
+    ['home','detail','login','admin','user-auth','account','article'].forEach(v => {
       document.getElementById('view-'+v).classList.toggle('active', v === name);
     });
     window.scrollTo(0,0);
     setTimeout(() => document.body.classList.remove('view-transitioning'), 400);
+    if(name === 'home'){
+      document.title = DEFAULT_TITLE;
+      setMetaDescription(DEFAULT_DESC);
+    }
   }
   window.switchAuthTab = switchAuthTab;
   window.doUserLogin = doUserLogin;
@@ -1334,6 +1355,101 @@
       : '<option value="">no premium tools yet</option>';
   }
 
+  const ARTICLES = [
+    {
+      id: "termux-setup", icon: "📱", readTime: "4 min read",
+      title: "Termux Setup Guide for Beginners",
+      desc: "Everything you need to get Termux ready for security tools — updates, storage access, and common first-run mistakes.",
+      body: `
+        <p>Termux turns an Android phone into a usable Linux terminal — no root required. Here's how to set it up properly before installing any security tool.</p>
+        <h4 style="margin-top:30px;">1. Install Termux the right way</h4>
+        <p>Don't install Termux from the Play Store — it's outdated and no longer maintained there. Get it from <a href="https://f-droid.org/packages/com.termux/" target="_blank" rel="noopener">F-Droid</a> instead, which has the actively updated version.</p>
+        <h4 style="margin-top:30px;">2. Update packages first</h4>
+        <div class="code-block">pkg update &amp;&amp; pkg upgrade -y</div>
+        <p style="margin-top:12px;">Always run this before installing anything. Termux's package list changes often, and skipping this step is the #1 cause of "package not found" errors.</p>
+        <h4 style="margin-top:30px;">3. Give it storage access</h4>
+        <div class="code-block">termux-setup-storage</div>
+        <p style="margin-top:12px;">This lets Termux read/write files in your phone's normal storage (Downloads, etc.) — needed for saving scan results or wordlists.</p>
+        <h4 style="margin-top:30px;">4. Install the basics</h4>
+        <div class="code-block">pkg install git python wget curl -y</div>
+        <p style="margin-top:12px;">Most security tools depend on one of these. Installing them upfront saves time later.</p>
+        <h4 style="margin-top:30px;">Common mistakes</h4>
+        <p>Keeping Termux running in the background gets it killed by battery optimization on most phones — disable battery optimization for Termux in your phone's app settings if a long scan keeps stopping.</p>
+      `
+    },
+    {
+      id: "beginner-roadmap", icon: "🗺️", readTime: "5 min read",
+      title: "Beginner Cybersecurity Roadmap",
+      desc: "A realistic order to learn things in — networking basics first, tools second, not the other way around.",
+      body: `
+        <p>Most beginners jump straight to "hacking tools" and get stuck because they skip the fundamentals. Here's a more realistic order.</p>
+        <h4 style="margin-top:30px;">Stage 1 — Networking basics (2-3 weeks)</h4>
+        <p>Understand what an IP address, port, and protocol actually are before touching any scanner. Free resource: Professor Messer's Network+ videos on YouTube cover this well.</p>
+        <h4 style="margin-top:30px;">Stage 2 — Linux comfort (2-3 weeks)</h4>
+        <p>You don't need to master Linux, but you should be comfortable navigating a terminal, editing files, and managing permissions. Termux or a Kali VM both work for practice.</p>
+        <h4 style="margin-top:30px;">Stage 3 — Learn one tool deeply (ongoing)</h4>
+        <p>Start with Nmap. Don't just memorize flags — understand what each scan type is actually doing on the network. Depth on one tool teaches you more than breadth across ten.</p>
+        <h4 style="margin-top:30px;">Stage 4 — Practice legally</h4>
+        <p>TryHackMe's free tier is the best starting point — guided rooms that explain concepts as you go. Hack The Box is better once you're past beginner level and want less hand-holding.</p>
+        <h4 style="margin-top:30px;">Stage 5 — Certifications (optional)</h4>
+        <p>If you want this professionally, CompTIA Security+ is a reasonable first cert, followed by something hands-on like eJPT or OSCP later.</p>
+      `
+    },
+    {
+      id: "osint-tools", icon: "🔍", readTime: "4 min read",
+      title: "Top OSINT Tools Explained",
+      desc: "What OSINT actually means, and the tools used to gather public information the right way.",
+      body: `
+        <p>OSINT (Open-Source Intelligence) means gathering information that's already publicly available — no hacking involved. It's one of the most practical and legal skills in cybersecurity.</p>
+        <h4 style="margin-top:30px;">theHarvester</h4>
+        <p>Pulls emails, subdomains, and hostnames tied to a domain from public search engines. Used at the start of an authorized security assessment to map an organization's public footprint.</p>
+        <h4 style="margin-top:30px;">Sherlock</h4>
+        <p>Checks which platforms a username exists on, across hundreds of sites at once. Useful for digital footprint audits — seeing what's publicly tied to a handle.</p>
+        <h4 style="margin-top:30px;">Recon-ng</h4>
+        <p>A full framework rather than a single tool — lets you chain multiple OSINT modules together and keep findings organized in one workspace.</p>
+        <h4 style="margin-top:30px;">Where OSINT crosses a line</h4>
+        <p>OSINT itself is legal because the information is public. It becomes a problem the moment it's used to harass, stalk, or target a specific person without a legitimate reason. Always have a clear, authorized purpose before you start.</p>
+      `
+    }
+  ];
+
+  function renderArticles(){
+    const agrid = document.getElementById('articles-grid');
+    if(!agrid) return;
+    agrid.innerHTML = ARTICLES.map(a => `
+      <div class="tool-card" data-aid="${a.id}">
+        <div class="tool-id">GUIDE</div>
+        <div class="tool-icon">${a.icon}</div>
+        <h3>${escapeHtml(a.title)}</h3>
+        <span class="tool-tag">${a.readTime} · free</span>
+        <p>${escapeHtml(a.desc)}</p>
+        <span class="tool-link">read guide →</span>
+      </div>`).join('');
+    agrid.querySelectorAll('.tool-card').forEach(card => {
+      card.addEventListener('click', () => openArticle(card.dataset.aid));
+    });
+    revealCardsOnScroll();
+  }
+
+  window.openArticle = openArticle;
+  function openArticle(articleId){
+    const a = ARTICLES.find(x => x.id === articleId);
+    if(!a) return;
+    document.getElementById('a-title').textContent = a.title;
+    document.getElementById('a-meta').textContent = a.readTime + ' · Free Guide';
+    document.getElementById('a-body').innerHTML = a.body;
+    document.title = a.title + ' — ShankyTools';
+    setMetaDescription(a.desc);
+    showView('article');
+  }
+
+  function setMetaDescription(desc){
+    let tag = document.querySelector('meta[name="description"]');
+    if(tag) tag.setAttribute('content', desc);
+  }
+  const DEFAULT_TITLE = document.title;
+  const DEFAULT_DESC = "ShankyTools: real penetration-testing tools explained properly — install guides, flags, usage and legal context for Termux and Linux.";
+
   function renderGrid(filter){
     const grid = document.getElementById('tools-grid');
     let list;
@@ -1409,6 +1525,8 @@
     document.getElementById('d-tag').textContent = (t.isPremium ? '⚡ PREMIUM — ' : '') + (t.tag || '');
     document.getElementById('d-desc').textContent = t.desc || '';
     document.getElementById('d-admin-actions').style.display = currentUser ? 'flex' : 'none';
+    document.title = t.name + ' — Install & Usage Guide | ShankyTools';
+    setMetaDescription((t.desc || '').slice(0, 155));
 
     const hasAccess = currentUser || !t.isPremium || userPurchases.has(docId);
     const body = document.querySelector('.detail-body');
@@ -1629,6 +1747,7 @@
   window.escapeHtml = escapeHtml;
 
   loadTools();
+  renderArticles();
 </script>
 
 <script>
