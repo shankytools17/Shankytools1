@@ -1034,12 +1034,15 @@
     <div class="admin-head">
       <h2>admin panel</h2>
       <div class="admin-actions">
+        <button class="btn" onclick="loadAnalytics()">📊 refresh stats</button>
         <button class="btn" onclick="openForm()">+ add tool</button>
         <button class="btn ghost" onclick="openBulkForm()">⚡ bulk import</button>
         <button class="btn ghost" onclick="openGrantForm()" style="border-color:var(--gold-dim); color:var(--gold);">🔓 grant access</button>
         <button class="btn ghost" onclick="doLogout()">log out</button>
       </div>
     </div>
+
+    <div class="hud-panel" id="admin-analytics" style="margin-bottom:30px; border:1px solid var(--line);"></div>
 
     <div class="admin-form" id="grant-form">
       <h3 style="color:var(--gold);">grant premium access manually</h3>
@@ -1079,6 +1082,16 @@
         <div class="field"><label>official link</label><input type="text" id="f-official" placeholder="https://..."></div>
       </div>
       <div class="field"><label>description</label><textarea id="f-desc" placeholder="What the tool does..."></textarea></div>
+      <div class="row2">
+        <div class="field">
+          <label>banner image URL (optional — upload to imgur.com first, paste link here)</label>
+          <input type="text" id="f-image-url" placeholder="https://i.imgur.com/xxxxx.jpg">
+        </div>
+        <div class="field">
+          <label>demo video URL (YouTube link or .mp4, optional)</label>
+          <input type="text" id="f-video-url" placeholder="https://youtube.com/watch?v=...">
+        </div>
+      </div>
       <div class="field"><label>install command</label><textarea id="f-install" placeholder="pkg install ..."></textarea></div>
       <div class="field"><label>usage command</label><textarea id="f-use" placeholder="nmap -sV target"></textarea></div>
       <div class="field"><label>sample output</label><textarea id="f-output" placeholder="PORT STATE..."></textarea></div>
@@ -1111,8 +1124,10 @@
     GoogleAuthProvider, signInWithPopup
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy
+    getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy,
+    setDoc, getDoc, increment, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 
   const firebaseConfig = {
     apiKey: "AIzaSyCH3tvgMGNnXZkN_7STpJwbWDTM8FRhjXE",
@@ -1317,6 +1332,7 @@
       }
       clearRateLimit('rl_admin_' + email);
       showView('admin');
+      loadAnalytics();
     } catch(e){
       recordFailedAttempt('rl_admin_' + email, rl.data || {});
       errEl.textContent = 'Login failed: check email and password.';
@@ -1463,6 +1479,7 @@
     grid.innerHTML = list.map(t => `
       <div class="tool-card ${t.isPremium ? 'is-premium' : ''}" data-id="${t.docId}">
         ${t.isPremium ? `<div class="price-badge">$${t.price || 0}</div>` : ''}
+        ${t.imageUrl ? `<img src="${t.imageUrl}" alt="" style="width:100%; height:120px; object-fit:cover; border:1px solid var(--line); margin-bottom:16px;">` : ''}
         <div class="tool-id">TOOL</div>
         <div class="tool-icon">${t.icon || '◆'}</div>
         <h3>${escapeHtml(t.name||'')}</h3>
@@ -1500,6 +1517,14 @@
     pill.classList.add('active');
     renderGrid(pill.dataset.cat);
   });
+
+  function renderVideoEmbed(url){
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+    if(ytMatch){
+      return `<iframe width="100%" height="280" style="border:1px solid var(--line);" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
+    }
+    return `<video controls style="width:100%; border:1px solid var(--line);"><source src="${url}"></video>`;
+  }
 
   let userPurchases = new Set();
 
@@ -1559,6 +1584,8 @@
       `;
     } else {
       body.innerHTML = `
+        ${t.imageUrl ? `<div class="detail-section"><img src="${t.imageUrl}" alt="${escapeHtml(t.name||'')}" style="width:100%; border:1px solid var(--line); display:block;"></div>` : ''}
+        ${t.videoUrl ? `<div class="detail-section">${renderVideoEmbed(t.videoUrl)}</div>` : ''}
         <div class="detail-section"><h4>what it does</h4><p>${escapeHtml(t.desc||'')}</p></div>
         <div class="detail-section"><h4>install — termux / linux</h4><div class="code-block" id="d-install"><button class="copy-btn" onclick="copyText(this)">copy</button></div></div>
         <div class="detail-section"><h4>basic usage</h4><div class="code-block" id="d-use"><button class="copy-btn" onclick="copyText(this)">copy</button></div></div>
@@ -1634,7 +1661,7 @@
 
   function openForm(){
     document.getElementById('form-title').textContent = 'add tool';
-    ['f-docid','f-name','f-tag','f-icon','f-official','f-desc','f-install','f-use','f-output','f-flags','f-price'].forEach(id => document.getElementById(id).value = '');
+    ['f-docid','f-name','f-tag','f-icon','f-official','f-desc','f-install','f-use','f-output','f-flags','f-price','f-video-url','f-image-url'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-is-premium').value = 'no';
     document.getElementById('admin-form').classList.add('open');
   }
@@ -1656,6 +1683,8 @@
     document.getElementById('f-flags').value = (t.flags||[]).map(f => `${f.flag} | ${f.desc}`).join('\n');
     document.getElementById('f-is-premium').value = t.isPremium ? 'yes' : 'no';
     document.getElementById('f-price').value = t.price || '';
+    document.getElementById('f-video-url').value = t.videoUrl || '';
+    document.getElementById('f-image-url').value = t.imageUrl || '';
     showView('admin');
     document.getElementById('admin-form').classList.add('open');
   }
@@ -1685,9 +1714,12 @@
       output: document.getElementById('f-output').value.trim(),
       flags: flags,
       isPremium: document.getElementById('f-is-premium').value === 'yes',
-      price: parseFloat(document.getElementById('f-price').value) || 0
+      price: parseFloat(document.getElementById('f-price').value) || 0,
+      videoUrl: document.getElementById('f-video-url').value.trim(),
+      imageUrl: document.getElementById('f-image-url').value.trim()
     };
     if(!data.name){ alert('Name is required.'); return; }
+
     try{
       if(docId){
         await updateDoc(doc(db, 'tools', docId), data);
@@ -1697,7 +1729,7 @@
       closeForm();
       loadTools();
     } catch(e){
-      alert('Save failed — check Firestore rules and that you are logged in as admin.');
+      alert('Save failed — check Firestore/Storage rules and that you are logged in as admin.');
       console.error(e);
     }
   }
@@ -1745,6 +1777,58 @@
     return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
   window.escapeHtml = escapeHtml;
+
+  // ===== visitor tracking: total views + live presence =====
+  async function trackVisit(){
+    try{
+      await setDoc(doc(db, 'stats', 'pageviews'), { count: increment(1) }, { merge: true });
+    } catch(e){ console.error('pageview track failed', e); }
+
+    try{
+      let sessionId = sessionStorage.getItem('shankytools_session');
+      if(!sessionId){
+        sessionId = 'sess_' + Math.random().toString(36).slice(2) + Date.now();
+        sessionStorage.setItem('shankytools_session', sessionId);
+      }
+      const beat = () => setDoc(doc(db, 'presence', sessionId), { lastSeen: Date.now() }, { merge: true }).catch(()=>{});
+      beat();
+      setInterval(beat, 20000);
+    } catch(e){ console.error('presence track failed', e); }
+  }
+  trackVisit();
+
+  window.loadAnalytics = loadAnalytics;
+  async function loadAnalytics(){
+    const box = document.getElementById('admin-analytics');
+    if(!box) return;
+    box.innerHTML = 'loading...';
+    try{
+      const viewsSnap = await getDoc(doc(db, 'stats', 'pageviews'));
+      const totalViews = viewsSnap.exists() ? (viewsSnap.data().count || 0) : 0;
+
+      const presenceSnap = await getDocs(collection(db, 'presence'));
+      const now = Date.now();
+      let liveCount = 0;
+      presenceSnap.docs.forEach(d => {
+        const ls = d.data().lastSeen || 0;
+        if(now - ls < 90000) liveCount++;
+      });
+
+      box.innerHTML = `
+        <div class="hud-card" style="background:var(--bg); border:1px solid var(--line); flex:1; min-width:140px;">
+          <div style="font-family:var(--mono); font-size:2rem; color:var(--blood);">${totalViews}</div>
+          <div class="hud-label">total page views</div>
+        </div>
+        <div class="hud-card" style="background:var(--bg); border:1px solid var(--line); flex:1; min-width:140px;">
+          <div style="font-family:var(--mono); font-size:2rem; color:var(--acid);">${liveCount}</div>
+          <div class="hud-label">live right now</div>
+        </div>
+      `;
+    } catch(e){
+      box.innerHTML = '<span style="color:var(--blood); font-family:var(--mono); font-size:0.8rem;">failed to load — check Firestore rules for stats/presence</span>';
+      console.error(e);
+    }
+  }
 
   loadTools();
   renderArticles();
